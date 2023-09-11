@@ -1,0 +1,10 @@
+spring:
+  profiles:
+    include:
+      - setting
+
+logging:
+  config: classpath:logback-spring.xml
+
+server:
+  port: 11451
