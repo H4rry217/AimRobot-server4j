@@ -71,13 +71,41 @@ public class RobotController {
         }
 
         if(serverId != null) {
-            robotService.sendChat(serverId, "管理员的大喇叭:"+params.get("message"));
+            robotService.sendChat(serverId, params.get("message"));
         }
 
         return new RequestResult().putData(serverId).withOriginMsg(
                 (serverId == null?
                         "找不到相应的远程服务器":
                         "发送管理员大喇叭至 "+serverId+" 服务器"
+                )
+        );
+    }
+
+    @RequestMapping(value = "/exceCommand")
+    @AccessToken
+    public RequestResult exceCommand(@RequestBody Map<String, String> params){
+        Set<String> set = robotService.getConnectServerIds();
+        String serverId = null;
+
+        if(params.get("serverId") != null && set.contains(params.get("serverId"))){
+            serverId = params.get("serverId");
+        }else if(set.size() == 1){
+            //使用默认服务器
+            for (String sId: set){
+                serverId = sId;
+                break;
+            }
+        }
+
+        if(serverId != null) {
+            robotService.exceCommand(serverId, params.get("command"));
+        }
+
+        return new RequestResult().putData(serverId).withOriginMsg(
+                (serverId == null?
+                        "找不到相应的远程服务器":
+                        "发送指令至 "+serverId+" 服务器"
                 )
         );
     }

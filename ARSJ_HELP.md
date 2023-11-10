@@ -34,13 +34,13 @@ server:
 ```yml
 robot-websocket:
   token: "AimRobotServer4j"
-	#表示AimRobotLite和QQ机器人连接ARSJ服务器时，所必须的验证令牌
-	#ARSJ会判断数据请求数据中的令牌是否和ARSJ设置中的令牌相等
-	#若设置为 "" 则代表每次启动都会随机生成令牌，建议不要随意泄露令牌
+  #表示AimRobotLite和QQ机器人连接ARSJ服务器时，所必须的验证令牌
+  #ARSJ会判断数据请求数据中的令牌是否和ARSJ设置中的令牌相等
+  #若设置为 "" 则代表每次启动都会随机生成令牌，建议不要随意泄露令牌
 ```
 
 ## 指令
 直接在ARSJ控制台中输入对应指令
 
-- **getToken**
+- **getToken**  
   查看当前ARSJ的Token令牌

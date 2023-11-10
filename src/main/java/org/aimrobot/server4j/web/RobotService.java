@@ -2,6 +2,7 @@ package org.aimrobot.server4j.web;
 
 import org.aimrobot.server4j.framework.config.SettingConfig;
 import org.aimrobot.server4j.framework.network.packet.BanPlayerByNamePacket;
+import org.aimrobot.server4j.framework.network.packet.CommandPacket;
 import org.aimrobot.server4j.framework.network.packet.SendChatPacket;
 import org.aimrobot.server4j.web.websocket.RobotConnectionManager;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -50,6 +51,14 @@ public class RobotService {
     public void sendChat(String serverId, String message){
         SendChatPacket pk = new SendChatPacket();
         pk.message = message;
+
+        robotConnectionManager.sendPacket(serverId, pk);
+    }
+
+    @ShellMethod(key = "exceCommand", value = "execute command")
+    public void exceCommand(String serverId, String command){
+        CommandPacket pk = new CommandPacket();
+        pk.command = command;
 
         robotConnectionManager.sendPacket(serverId, pk);
     }
