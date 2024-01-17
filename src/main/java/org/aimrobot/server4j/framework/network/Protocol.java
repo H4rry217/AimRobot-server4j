@@ -18,4 +18,8 @@ public interface Protocol {
     public static byte PACKET_CONNECTION_CLOSE = 0x10;
 
 
+    public static byte PACKET_EVENT_DEATH = 0x0a;
+    public static byte PACKET_EVENT_CHAT = 0x0b;
+
+
 }

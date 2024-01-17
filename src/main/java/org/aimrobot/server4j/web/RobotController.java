@@ -2,8 +2,10 @@ package org.aimrobot.server4j.web;
 
 import org.aimrobot.server4j.framework.AccessToken;
 import org.aimrobot.server4j.framework.RequestResult;
+import org.aimrobot.server4j.web.websocket.RobotWebsocketHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.shell.standard.ShellComponent;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -21,10 +23,14 @@ import java.util.Set;
 @RestController
 @RequestMapping(value = "/robot")
 @ShellComponent
+@CrossOrigin
 public class RobotController {
 
     @Autowired
     private RobotService robotService;
+
+    @Autowired
+    private RobotWebsocketHandler robotWebsocketHandler;
 
     @RequestMapping(value = "/banPlayer")
     @AccessToken
@@ -115,4 +121,9 @@ public class RobotController {
         return new RequestResult().putData(robotService.getConnectServerIds());
     }
 
+    @RequestMapping(value = "/getRecentActivePlayers")
+    public RequestResult getRecentActivePlayers(){
+        var set = robotWebsocketHandler.getRecentPlayers();
+        return new RequestResult().putData(set).withOriginMsg("共返回 " +set.size()+ " 名最近活跃玩家");
+    }
 }
