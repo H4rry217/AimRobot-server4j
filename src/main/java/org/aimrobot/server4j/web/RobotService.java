@@ -1,9 +1,7 @@
 package org.aimrobot.server4j.web;
 
 import org.aimrobot.server4j.framework.config.SettingConfig;
-import org.aimrobot.server4j.framework.network.packet.BanPlayerByNamePacket;
-import org.aimrobot.server4j.framework.network.packet.CommandPacket;
-import org.aimrobot.server4j.framework.network.packet.SendChatPacket;
+import org.aimrobot.server4j.framework.network.packet.*;
 import org.aimrobot.server4j.web.websocket.RobotConnectionManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.shell.standard.ShellComponent;
@@ -33,8 +31,8 @@ public class RobotService {
         return settingConfig.getToken();
     }
 
-    @ShellMethod(key = "getConnectServerIds", value = "get the currently connected server")
-    public Set<String> getConnectServerIds(){
+    @ShellMethod(key = "getExistsServerIds", value = "get the currently exists server")
+    public Set<String> getExistsServerIds(){
         return robotConnectionManager.getServerIds();
     }
 
@@ -56,11 +54,19 @@ public class RobotService {
     }
 
     @ShellMethod(key = "exceCommand", value = "execute command")
-    public void exceCommand(String serverId, String command){
+    public void execCommand(String serverId, String command){
         CommandPacket pk = new CommandPacket();
         pk.command = command;
 
         robotConnectionManager.sendPacket(serverId, pk);
     }
+
+    public void runTask(String serverId, String task){
+        RunTaskPacket pk = new RunTaskPacket();
+        pk.runTask = task;
+
+        robotConnectionManager.sendPacket(serverId, pk);
+    }
+
 
 }

@@ -9,20 +9,18 @@ import org.aimrobot.server4j.framework.network.Protocol;
  * @author: H4rry217
  **/
 
-public class BanPlayerByNamePacket extends DataPacket {
+public class RunTaskPacket extends DataPacket {
 
-    public String playerName;
-    public String reason;
+    public String runTask;
 
     @Override
     public byte getPacketId() {
-        return Protocol.PACKET_BAN_BY_NAME;
+        return Protocol.PACKET_RUNTASK;
     }
 
     @Override
     public void decode() {
-        this.playerName = this.getString();
-        this.reason = this.getString();
+
     }
 
     @Override
@@ -30,9 +28,7 @@ public class BanPlayerByNamePacket extends DataPacket {
         this.reset();
 
         this.putByte(this.getPacketId());
-        this.putString(this.playerName);
-        this.putString(this.reason);
-
-        this.encode = true;
+        this.putString(this.runTask);
     }
+
 }

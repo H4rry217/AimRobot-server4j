@@ -1,2 +1,6 @@
 robot-websocket:
   token: "AimRobotServer4j"
+
+arl:
+  # 单个ARSJ所同时连接的服务器数
+  max-limit: 10

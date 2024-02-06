@@ -20,6 +20,8 @@ public interface Protocol {
 
     public static byte PACKET_EVENT_DEATH = 0x0a;
     public static byte PACKET_EVENT_CHAT = 0x0b;
+    public static byte PACKET_SCREENSHOT = 0x0c;
 
-
+    public static byte PACKET_WINDOWINFO = 0x0d;
+    public static byte PACKET_RUNTASK = 0x0e;
 }

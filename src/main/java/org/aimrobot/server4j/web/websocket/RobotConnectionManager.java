@@ -1,8 +1,8 @@
 package org.aimrobot.server4j.web.websocket;
 
+import org.aimrobot.server4j.framework.ServerContext;
 import org.aimrobot.server4j.framework.config.SettingConfig;
 import org.aimrobot.server4j.framework.network.DataPacket;
-import org.aimrobot.server4j.framework.network.packet.CloseConnectionPacket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +15,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @program: AimRobot-server4j
@@ -29,13 +28,23 @@ public class RobotConnectionManager {
     @Autowired
     private SettingConfig settingConfig;
 
-    private final Map<String, WebSocketSession> sessionMap = new ConcurrentHashMap<>();
+    private final Map<WebSocketSession, String> sessionMap = new HashMap<>();
+
+    private final Map<String, ServerContext> serverContexts = new HashMap<>();
 
     private static final Logger logger = LoggerFactory.getLogger(RobotConnectionManager.class);
     private static final String PARAMS_ACCESS_TOKEN = "token";
     private static final String PARAMS_SERVER_ID = "serverId";
 
-    public boolean tryAdd(WebSocketSession session){
+    public String getServerId(WebSocketSession webSocketSession){
+        return this.sessionMap.get(webSocketSession);
+    }
+
+    public ServerContext getServerContext(String serverId){
+        return this.serverContexts.get(serverId);
+    }
+
+    public synchronized boolean tryAdd(WebSocketSession session){
         Map<String, String> params = getQueryMap(Objects.requireNonNull(session.getUri()).toString());
 
         String ip;
@@ -54,11 +63,30 @@ public class RobotConnectionManager {
             logger.info("{} use token: {} and serverId: {} to connect the server ...", ip, paramToken, paramServerId);
 
             if(this.settingConfig.getToken().equals(paramToken)) {
-                if (this.sessionMap.putIfAbsent(paramServerId, session) == null) {
-                    logger.info("serverId {} connect success", paramServerId);
-                    return true;
+                if(this.sessionMap.size() < this.settingConfig.getMaxConnection()){
+
+                    if(!this.serverContexts.containsKey(paramServerId) && this.serverContexts.size() < settingConfig.getMaxConnection()){
+                        this.serverContexts.put(paramServerId, new ServerContext(this));
+                    }
+
+                    if (this.serverContexts.containsKey(paramServerId)) {
+                        if(this.serverContexts.get(paramServerId).getSession() == null){
+                            logger.info("serverId {} connect success", paramServerId);
+                            this.sessionMap.put(session, paramServerId);
+
+                            ServerContext serverContext = this.serverContexts.get(paramServerId);
+                            serverContext.setConnectSession(session);
+
+                            return true;
+                        }else{
+                            logger.error("there has already been other connection");
+                        }
+
+                    }else{
+                        logger.error("max connect count {} excess!", settingConfig.getMaxConnection());
+                    }
                 }else{
-                    logger.error("there has already been other connection");
+                    logger.error("max connect count {} excess!", settingConfig.getMaxConnection());
                 }
 
             }else{
@@ -71,36 +99,17 @@ public class RobotConnectionManager {
         return false;
     }
 
-    public void forceClose(String serverId){
-        WebSocketSession session = this.sessionMap.remove(serverId);
-        if(session != null){
-            try {
-                session.close();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            } finally {
-                logger.info("robot connection ({}) force closed", serverId);
-            }
-        }
-    }
-
-    public void close(String serverId){
-        CloseConnectionPacket packet =  new CloseConnectionPacket();
-        sendPacket(serverId, packet);
-
-        logger.info("robot connection ({}) closing...", serverId);
-    }
-
-    public void connectClosed(WebSocketSession session){
+    public synchronized void connectClosed(WebSocketSession session){
         Map<String, String> params = getQueryMap(Objects.requireNonNull(session.getUri()).toString());
 
         if(params.containsKey(PARAMS_SERVER_ID)){
             String serverId = params.get(PARAMS_SERVER_ID);
 
 
-            WebSocketSession sessionFromCache = this.sessionMap.get(serverId);
+            WebSocketSession sessionFromCache = this.serverContexts.get(serverId).getSession();
             if(session.equals(sessionFromCache)){
-                this.sessionMap.remove(serverId);
+                this.sessionMap.remove(sessionFromCache);
+                this.serverContexts.get(serverId).setConnectSession(null);
                 logger.info("robot connection ({}) closed", serverId);
             }
         }
@@ -110,9 +119,9 @@ public class RobotConnectionManager {
     public void sendPacket(String serverId, DataPacket pk){
         if(!pk.isEncode()) pk.encode();
 
-        this.sessionMap.computeIfPresent(serverId, (k, v) -> {
+        this.serverContexts.computeIfPresent(serverId, (k, v) -> {
             try {
-                v.sendMessage(new BinaryMessage(pk.getBuffer()));
+                v.getSession().sendMessage(new BinaryMessage(pk.getBuffer()));
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -121,7 +130,7 @@ public class RobotConnectionManager {
     }
 
     public Set<String> getServerIds(){
-        return this.sessionMap.keySet();
+        return this.serverContexts.keySet();
     }
 
     private static Map<String, String> getQueryMap(String url) {

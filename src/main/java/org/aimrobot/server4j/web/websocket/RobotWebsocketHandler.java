@@ -1,16 +1,14 @@
 package org.aimrobot.server4j.web.websocket;
 
-import org.aimrobot.server4j.framework.LRUCache;
+import org.aimrobot.server4j.framework.network.DataPacket;
 import org.aimrobot.server4j.framework.network.Protocol;
+import org.aimrobot.server4j.framework.network.packet.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.BinaryMessage;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.BinaryWebSocketHandler;
-
-import java.nio.charset.StandardCharsets;
-import java.util.Set;
 
 /**
  * @program: AimRobot-server4j
@@ -20,12 +18,6 @@ import java.util.Set;
 
 @Component
 public class RobotWebsocketHandler extends BinaryWebSocketHandler {
-
-    private final LRUCache<String, Long> activePlayers = new LRUCache<>(70);
-
-    public Set<String> getRecentPlayers(){
-        return this.activePlayers.keySet();
-    }
 
     @Autowired
     private RobotConnectionManager robotConnectionManager;
@@ -39,56 +31,40 @@ public class RobotWebsocketHandler extends BinaryWebSocketHandler {
     protected void handleBinaryMessage(WebSocketSession session, BinaryMessage message) throws Exception {
         byte pkId = message.getPayload().get();
 
+        DataPacket pk = DataPacket.getPacket(pkId);
+        pk.setBuffer(message.getPayload().array());
+        pk.setOffset(1);
+
+        pk.decode();
+
         switch(pkId){
             case Protocol.PACKET_EVENT_CHAT -> {
-                int nameLen = message.getPayload().getShort();
-                byte[] name = new byte[nameLen];
-                message.getPayload().get(name);
-                String playerName = new String(name, StandardCharsets.UTF_8);
-
-                int msgLen = message.getPayload().getShort();
-                byte[] msg = new byte[msgLen];
-                message.getPayload().get(msg);
-                String chatMsg = new String(msg, StandardCharsets.UTF_8);
-
-                this.activePlayers.put(playerName, 1L);
-                //TODO
+                var serverContext = robotConnectionManager.getServerContext(robotConnectionManager.getServerId(session));
+                serverContext.updateActivePlayer(((ChatEventPacket)pk).playerChatEvent.speaker);
+                serverContext.updateChat(((ChatEventPacket)pk).playerChatEvent);
             }
             case Protocol.PACKET_EVENT_DEATH -> {
-                int kpLen = message.getPayload().getShort();
-                byte[] kp = new byte[kpLen];
-                message.getPayload().get(kp);
-                String killerPlatoon = new String(kp, StandardCharsets.UTF_8);
-
-                int kLen = message.getPayload().getShort();
-                byte[] kName = new byte[kLen];
-                message.getPayload().get(kName);
-                String killerName = new String(kName, StandardCharsets.UTF_8);
-
-                int kbLen = message.getPayload().getShort();
-                byte[] kb = new byte[kbLen];
-                message.getPayload().get(kb);
-                String killBy = new String(kb, StandardCharsets.UTF_8);
-
-                int ppLen = message.getPayload().getShort();
-                byte[] pp = new byte[ppLen];
-                message.getPayload().get(pp);
-                String playerPlatoon = new String(pp, StandardCharsets.UTF_8);
-
-                int pLen = message.getPayload().getShort();
-                byte[] pName = new byte[pLen];
-                message.getPayload().get(pName);
-                String playerName = new String(pName, StandardCharsets.UTF_8);
-
-                this.activePlayers.put(playerName, 1L);
-                this.activePlayers.put(killerName, 1L);
-                //TODO
+                var serverContext = robotConnectionManager.getServerContext(robotConnectionManager.getServerId(session));
+                serverContext.updateActivePlayer(((DeathEventPacket)pk).playerDeathEvent.playerName);
+                serverContext.updateActivePlayer(((DeathEventPacket)pk).playerDeathEvent.killerName);
+            }
+            case Protocol.PACKET_SCREENSHOT -> {
+                var serverId = robotConnectionManager.getServerId(session);
+                robotConnectionManager.getServerContext(serverId).updateScreenshot(((ScreenshotPacket)pk).timestamp, ((ScreenshotPacket)pk).image);
+            }
+            case Protocol.PACKET_WINDOWINFO -> {
+                var serverId = robotConnectionManager.getServerId(session);
+                robotConnectionManager.getServerContext(serverId).updateWindowInfo((InfoUpdatePacket) pk);
+            }
+            case Protocol.PACKET_BAN_BY_NAME -> {
+                var serverId = robotConnectionManager.getServerId(session);
+                robotConnectionManager.getServerContext(serverId).updateBan((BanPlayerByNamePacket) pk);
             }
         }
     }
 
     @Override
-    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         robotConnectionManager.connectClosed(session);
     }
 

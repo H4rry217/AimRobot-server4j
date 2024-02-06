@@ -21,4 +21,7 @@ public class SettingConfig {
     @Value("${robot-websocket.token}")
     private String token;
 
+    @Value("${arl.max-limit}")
+    private Integer maxConnection;
+
 }

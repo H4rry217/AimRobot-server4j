@@ -143,6 +143,10 @@ public class BinaryStream {
         return Binary.readShort(this.get(2));
     }
 
+    public int getInt(){
+        return Binary.readInt(this.get(4));
+    }
+
     public void putShort(int s){
         this.put(Binary.writeShort(s));
     }
