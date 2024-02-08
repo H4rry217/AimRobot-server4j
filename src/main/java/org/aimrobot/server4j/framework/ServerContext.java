@@ -54,7 +54,8 @@ public final class ServerContext {
     }
 
     public List<BanRecord> getRecentBan(int size){
-        return this.banHistories.stream().limit(size).collect(Collectors.toList());
+        var list = this.banHistories.stream().toList();
+        return list.subList(Math.max(0, list.size() - size), list.size());
     }
 
     public List<ChatRecord> getRecentChat(int size){
